@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Pokémon Showdown Tera Controller",
+  "version": "1.0",
+  "description": "Control which Pokémon can Terastallize in Pokémon Showdown",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.pokemonshowdown.com/*"],
+      "js": ["content.js"]
+    }
+  ]
+}
