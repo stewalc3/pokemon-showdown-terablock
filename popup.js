@@ -9,16 +9,20 @@ document.addEventListener('DOMContentLoaded', async () => {
               target: { tabId: tab.id },
               func: () => {
                   const pokemonInputs = document.querySelectorAll('input[name="pokemon"]');
-                  return Array.from(pokemonInputs)
-                      .map(el => el.value)
-                      .filter(name => name && name !== 'Add Pokemon')
-                      .map(name => name.split('-')[0].trim());
+                  const nicknameInputs = document.querySelectorAll('input[name="nickname"]');
+                  
+                  return Array.from(pokemonInputs).map((el, index) => {
+                      const nickname = nicknameInputs[index]?.value || '';
+                      return {
+                          nickname: nickname,
+                          actualName: 'Pokemon'
+                      };
+                  }).filter(pokemon => pokemon.actualName && pokemon.actualName !== 'Add Pokemon');
               }
           });
 
           return results[0].result || [];
       } catch (error) {
-          console.error('Error getting team:', error);
           throw new Error('Please open the team builder to select Pokémon');
       }
   }
@@ -31,22 +35,26 @@ document.addEventListener('DOMContentLoaded', async () => {
           return;
       }
 
-      // Load existing settings
       chrome.storage.sync.get('teraSettings', (data) => {
           const settings = data.teraSettings || {};
           
           team.forEach(pokemon => {
               const div = document.createElement('div');
               div.className = 'pokemon-entry';
+              const displayName = pokemon.nickname ? 
+                  `${pokemon.nickname} (${pokemon.actualName})` : 
+                  pokemon.actualName;
+              
               div.innerHTML = `
-                  <input type="checkbox" id="${pokemon}" name="${pokemon}" 
-                         ${settings[pokemon] ? 'checked' : ''}>
-                  <label for="${pokemon}">${pokemon}</label>
+                  <input type="checkbox" id="${pokemon.actualName}" 
+                         name="${pokemon.nickname || pokemon.actualName}" 
+                         data-actual="${pokemon.actualName}"
+                         ${settings[pokemon.nickname || pokemon.actualName] ? 'checked' : ''}>
+                  <label for="${pokemon.actualName}">${displayName}</label>
               `;
               container.appendChild(div);
           });
 
-          // Add save button
           const saveButton = document.createElement('button');
           saveButton.textContent = 'Save Settings';
           saveButton.onclick = saveSettings;
@@ -57,13 +65,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function saveSettings() {
       const settings = {};
       document.querySelectorAll('.pokemon-entry input').forEach(checkbox => {
-          settings[checkbox.name] = checkbox.checked;
+          if (checkbox.checked) {
+              const nickname = checkbox.name;
+              const actualName = checkbox.getAttribute('data-actual');
+              settings[nickname] = actualName;
+          }
       });
       
       await chrome.storage.sync.set({ teraSettings: settings });
-      console.log('Saved settings:', settings);
       
-      // Show saved message
       const savedMsg = document.createElement('div');
       savedMsg.className = 'saved-message';
       savedMsg.textContent = 'Settings saved!';
@@ -71,7 +81,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       setTimeout(() => savedMsg.remove(), 2000);
   }
 
-  // Load team when popup opens
   try {
       const team = await getCurrentTeam();
       createTeamDisplay(team);
